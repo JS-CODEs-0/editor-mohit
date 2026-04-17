@@ -80,6 +80,8 @@ document.addEventListener('DOMContentLoaded', () => {
     navToggle.addEventListener('click', () => {
         navToggle.classList.toggle('active');
         navLinks.classList.toggle('open');
+        // Prevent body scroll when menu is open
+        document.body.style.overflow = navLinks.classList.contains('open') ? 'hidden' : '';
     });
 
     // Close mobile nav on link click
@@ -87,7 +89,19 @@ document.addEventListener('DOMContentLoaded', () => {
         link.addEventListener('click', () => {
             navToggle.classList.remove('active');
             navLinks.classList.remove('open');
+            document.body.style.overflow = '';
         });
+    });
+
+    // Close mobile nav on outside click (overlay)
+    document.addEventListener('click', (e) => {
+        if (navLinks.classList.contains('open') &&
+            !navLinks.contains(e.target) &&
+            !navToggle.contains(e.target)) {
+            navToggle.classList.remove('active');
+            navLinks.classList.remove('open');
+            document.body.style.overflow = '';
+        }
     });
 
     // Active nav link on scroll
@@ -232,7 +246,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // Click to open video in custom lightbox modal (9:16 aspect ratio)
+        // Click / tap to open video in custom lightbox modal (9:16 aspect ratio)
         card.addEventListener('click', () => {
             if (video) {
                 const videoSrc = video.querySelector('source').getAttribute('src');
@@ -243,6 +257,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 lightboxVideo.play().catch(() => {});
             }
         });
+
+        // Touch: play preview on tap-hold (touchstart), pause on touchend outside lightbox
+        card.addEventListener('touchstart', () => {
+            if (video) video.play().catch(() => {});
+        }, { passive: true });
+
+        card.addEventListener('touchend', () => {
+            // Only pause if lightbox is not open
+            if (!lightbox.classList.contains('active') && video) {
+                setTimeout(() => { video.pause(); video.currentTime = 0; }, 300);
+            }
+        }, { passive: true });
     });
 
     // Close lightbox function
@@ -338,6 +364,33 @@ document.addEventListener('DOMContentLoaded', () => {
     if (testimonialCards.length > 0) {
         testimonialCards[0].classList.add('active');
         autoSlide();
+    }
+
+    // Touch swipe support for testimonial carousel
+    let touchStartX = 0;
+    let touchEndX = 0;
+    const testimonialTrack = document.getElementById('testimonial-track');
+
+    if (testimonialTrack) {
+        testimonialTrack.addEventListener('touchstart', (e) => {
+            touchStartX = e.changedTouches[0].screenX;
+        }, { passive: true });
+
+        testimonialTrack.addEventListener('touchend', (e) => {
+            touchEndX = e.changedTouches[0].screenX;
+            const diff = touchStartX - touchEndX;
+            if (Math.abs(diff) > 50) {
+                if (diff > 0) {
+                    // Swipe left → next
+                    const next = (currentTestimonial + 1) % testimonialCards.length;
+                    goToTestimonial(next);
+                } else {
+                    // Swipe right → prev
+                    const prev = (currentTestimonial - 1 + testimonialCards.length) % testimonialCards.length;
+                    goToTestimonial(prev);
+                }
+            }
+        }, { passive: true });
     }
 
     // ============ CONTACT FORM ============
